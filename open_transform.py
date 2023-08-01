@@ -53,7 +53,7 @@ def open_transform_message(emails):
             else:
                 payment = total_payment(body) 
                 new_data = {'email' : receiver, 'save_email' : 0, 'get_quote_email' : 1, 'sale_email' : 0,
-                            'get_quote_time' : received_time, 'get_quote_gwp' : payment}
+                            'get_quote_time' : received_time,'get_quote_gwp' : payment}
                 df.loc[len(df)] = new_data 
                       
 
@@ -100,10 +100,11 @@ def total_payment(body):
         if period == 'halbjährlich':
             period = 2
 
+
         total_payment = net_payment * period
         total_payment = round(total_payment, 2)
 
-        print(total_payment)
+        #print(total_payment)
 
         return total_payment
 """

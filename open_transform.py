@@ -1,6 +1,7 @@
 import os
 import extract_msg
 import pandas as pd
+import numpy as np
 import openpyxl
 from datetime import datetime
 import re
@@ -45,66 +46,111 @@ def open_transform_message(emails):
                 df.loc[len(df)] = new_data
 
         if "Ihr Angebot" in subject:
+            payment = total_payment_get_quote(body) 
             if len(email_check) > 0:
                 df.at[email_check[0],'get_quote_email'] = df.at[email_check[0],'get_quote_email'] + 1
                 df.at[email_check[0],'get_quote_time'] = received_time
+                df.at[email_check[0],'get_quote_gwp'] =  payment
             else:
-                payment = total_payment(body) 
                 new_data = {'email' : receiver, 'save_email' : 0, 'get_quote_email' : 1, 'sale_email' : 0,
                             'get_quote_time' : received_time,'get_quote_gwp' : payment}
                 df.loc[len(df)] = new_data 
                       
-
-        if "Bestätigung Ihres Abschlusses" in subject and "CIO" not in subject:
+        if "Abschluss" in subject:
             if len(email_check) > 0:
                 df.at[email_check[0],'sale_email'] =  1
                 df.at[email_check[0],'sale_time'] =  received_time
+            elif (len(email_check) == 0) & ("CIO:" in subject):
+                e_mail_client = re.findall(r"E-Mail.+@.+\..+\s", body) #find email of client
+                e_mail_client = re.split('\s', e_mail_client[0])
+                e_mail_client = e_mail_client[2]
+                e_mail_client_in_df = df[df['email'].str.contains(e_mail_client)].index.values #find index of client
+                e_mail_client_in_df_index = e_mail_client_in_df[0]
+                payment = total_payment_get_sale(body)
+                df.loc[e_mail_client_in_df_index,'sale_gwp'] =  payment #add payment to client row
             else:
                 new_data = {'email' : receiver, 'save_email' : 0,  'get_quote_email' : 0, 'sale_email' : 1,
                             'sale_time': received_time}
                 df.loc[len(df)] = new_data
 
-
-def total_payment(body):
+#find get quote gwp
+def total_payment_get_quote(body):
      #find payment
-        payment = re.findall(r"\d+,\d+\s€", body)
-        payment = re.split('\s', payment[0])
-        payment = payment[0]
-        payment = payment.replace(',', '.')
-        
-        #find period of payment
-        period = re.findall(r"(vierteljährlich|halbjährlich|jährlich|monatlich)", body)
-        period = period[0]
+    payment = re.findall(r"\d+,\d+\s€", body)
+    payment = re.split('\s', payment[0])
+    payment = payment[0]
+    payment = payment.replace(',', '.')
+    
+    #find period of payment
+    period = re.findall(r"(vierteljährlich|halbjährlich|jährlich|monatlich)", body)
+    period = period[0]
 
-        #find if at or de
-        country = re.findall(r"Mitteilung §§16ff VersVG AT", body)
-        if len(country) > 0:
-            country = 'Austria'
-        else:
-            country = 'Germany'
-        
-        #remove tax from payment
-        if country == 'Germany':
-            net_payment = float(payment) / 1.19
-        if country == 'Austria':
-            net_payment = float(payment) / 1.11
+    #find if at or de
+    country = re.findall(r"Mitteilung §§16ff VersVG AT", body)
+    if len(country) > 0:
+        country = 'Austria'
+    else:
+        country = 'Germany'
+    
+    #remove tax from payment
+    if country == 'Germany':
+        net_payment = float(payment) / 1.19
+    if country == 'Austria':
+        net_payment = float(payment) / 1.11
 
-        #multiply by period
-        if period == 'vierteljährlich':
-            period = 4
-        if period == 'jährlich':
-            period = 1
-        if period == 'monatlich':
-            period = 12
-        if period == 'halbjährlich':
-            period = 2
+    #multiply by period
+    if period == 'vierteljährlich':
+        period = 4
+    if period == 'jährlich':
+        period = 1
+    if period == 'monatlich':
+        period = 12
+    if period == 'halbjährlich':
+        period = 2
 
-        total_payment = net_payment * period
-        total_payment = round(total_payment, 2)
+    total_payment = net_payment * period
+    total_payment = round(total_payment, 2)
 
-        #print(total_payment)
+    return total_payment
 
-        return total_payment
+#find sale gwp
+def total_payment_get_sale(body):
+    #find payment
+    payment = re.findall(r"\d+,\d+\s€\s.+inkl. Versicherungssteuer.", body)
+    payment = re.split('\s', payment[0])
+    payment = payment[0].replace(',', '.')
 
-"""crawl = folder_crawler()
+    #find period of payment
+    period = re.findall(r"\d+,\d+\s€\s.+inkl. Versicherungssteuer.", body)
+    period = re.split('\s', period[0])
+    period = period[2]
+
+    #find if at or de
+    country = re.findall(r"Firmensitz.+Deutschland", body)
+    country = re.split('\s', country[0])
+    country = country[2]
+    
+    #remove tax from payment
+    if country == 'Deutschland':
+        net_payment = float(payment) / 1.19
+    if country == 'Österreich':
+        net_payment = float(payment) / 1.11
+
+    #multiply by period
+    if period == 'vierteljährlich':
+        period = 4
+    if period == 'jährlich':
+        period = 1
+    if period == 'monatlich':
+        period = 12
+    if period == 'halbjährlich':
+        period = 2
+
+    total_payment = net_payment * period
+    total_payment = round(total_payment, 2)
+
+    return total_payment
+
+"""
+crawl = folder_crawler()
 open_transform_message(crawl)"""

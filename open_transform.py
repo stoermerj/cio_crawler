@@ -11,7 +11,7 @@ PATH = "example_mails"
 TODAY = datetime.today().strftime('%Y-%m-%d')
 
 df = pd.DataFrame(columns=['email', 'save_email', 'save_time', 'get_quote_email', 'get_quote_time', 'get_quote_gwp',
-                           'sale_email', 'sale_time', 'sale_gwp'])
+                           'sale_email', 'sale_time', 'sale_gwp', 'tel_num'])
 
 """
 crawl the folder and return the file names
@@ -47,13 +47,15 @@ def open_transform_message(emails):
 
         if "Ihr Angebot" in subject:
             payment = total_payment_get_quote(body) 
+            tel_num = telephone_number(body)
+            print(tel_num)
             if len(email_check) > 0:
                 df.at[email_check[0],'get_quote_email'] = df.at[email_check[0],'get_quote_email'] + 1
                 df.at[email_check[0],'get_quote_time'] = received_time
                 df.at[email_check[0],'get_quote_gwp'] =  payment
             else:
                 new_data = {'email' : receiver, 'save_email' : 0, 'get_quote_email' : 1, 'sale_email' : 0,
-                            'get_quote_time' : received_time,'get_quote_gwp' : payment}
+                            'get_quote_time' : received_time,'get_quote_gwp' : payment, 'tel_num': tel_num}
                 df.loc[len(df)] = new_data 
                       
         if "Abschluss" in subject:
@@ -151,6 +153,16 @@ def total_payment_get_sale(body):
 
     return total_payment
 
+def telephone_number(body):
+    tel_num = re.findall(r"Telefonnummer\s+?.+\san", body)
+    tel_num = re.split('\s', tel_num[0])
+    tel_num.pop(-1)
+    tel_num.pop(0)
+    tel_num = ' '.join(tel_num)
+    return tel_num
+
+
 """
 crawl = folder_crawler()
-open_transform_message(crawl)"""
+open_transform_message(crawl)
+print(df)"""

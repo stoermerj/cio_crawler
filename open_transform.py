@@ -35,7 +35,7 @@ def open_transform_message(emails):
         receiver = msg.to #get receive email
         body = msg.body #get body of email
         email_check = df.index[df['email']==receiver].tolist() #check if email address is in df
-
+        print(subject)
         if "individuelle Konfiguration" in subject:
             if len(email_check) > 0:
                 df.at[email_check[0],'save_email'] = df.at[email_check[0],'save_email'] + 1
@@ -128,9 +128,9 @@ def total_payment_get_sale(body):
     period = period[2]
 
     #find if at or de
-    country = re.findall(r"Firmensitz.+Deutschland", body)
+    country = re.findall(r"Firmensitz.+(Deutschland|Österreich)", body)
     country = re.split('\s', country[0])
-    country = country[2]
+    country = country[0]
     
     #remove tax from payment
     if country == 'Deutschland':

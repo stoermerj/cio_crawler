@@ -7,7 +7,7 @@ from datetime import datetime
 import re
 
 #to change the path where e-mails are read from, simply change the string after path
-PATH = "example_mails"
+PATH = "mails_input"
 TODAY = datetime.today().strftime('%Y-%m-%d')
 
 df = pd.DataFrame(columns=['email', 'save_email', 'save_time', 'get_quote_email', 'get_quote_time', 'get_quote_gwp',
@@ -36,6 +36,7 @@ def open_transform_message(emails):
         body = msg.body #get body of email
         email_check = df.index[df['email']==receiver].tolist() #check if email address is in df
         print(subject)
+
         if "individuelle Konfiguration" in subject:
             if len(email_check) > 0:
                 df.at[email_check[0],'save_email'] = df.at[email_check[0],'save_email'] + 1
@@ -66,8 +67,16 @@ def open_transform_message(emails):
                 e_mail_client = re.findall(r"E-Mail.+@.+\..+\s", body) #find email of client
                 e_mail_client = re.split('\s', e_mail_client[0])
                 e_mail_client = e_mail_client[2]
-                e_mail_client_in_df = df[df['email'].str.contains(e_mail_client)].index.values #find index of client
-                e_mail_client_in_df_index = e_mail_client_in_df[0]
+                
+                try:
+                    e_mail_client_in_df = df[df['email'].str.contains(e_mail_client)].index.values #find index of client
+                    e_mail_client_in_df_index = e_mail_client_in_df[0]
+                except:
+                    for i, df_mail in enumerate(df['email']):
+                        if e_mail_client == df_mail:
+                            print(df.loc[i,'email'])
+                            e_mail_client_in_df_index = i
+
                 payment = total_payment_get_sale(body)
                 df.loc[e_mail_client_in_df_index,'sale_gwp'] =  payment #add payment to client row
             else:
@@ -79,6 +88,8 @@ def open_transform_message(emails):
 def total_payment_get_quote(body):
      #find payment
     payment = re.findall(r"\d+,\d+\s€", body)
+    if not payment:
+        payment = re.findall(r"\d+\s€", body)
     payment = re.split('\s', payment[0])
     payment = payment[0]
     payment = payment.replace(',', '.')
@@ -155,6 +166,8 @@ def total_payment_get_sale(body):
 
 def telephone_number(body):
     tel_num = re.findall(r"Telefonnummer\s+?.+\san", body)
+    if not tel_num:
+        return ''
     tel_num = re.split('\s', tel_num[0])
     tel_num.pop(-1)
     tel_num.pop(0)
